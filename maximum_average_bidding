@@ -1,0 +1,96 @@
+import itertools
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.stats.api as sms
+from scipy.stats import ttest_1samp, shapiro, levene, ttest_ind, mannwhitneyu, \
+    pearsonr, spearmanr, kendalltau, f_oneway, kruskal
+from statsmodels.stats.proportion import proportions_ztest
+
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', 10)
+pd.set_option('display.float_format', lambda x: '%.5f' % x)
+
+# Görev 1:  Veriyi Hazırlama ve Analiz Etme
+
+"""
+Adım 1:  ab_testing_data.xlsxadlı kontrol ve test grubu verilerinden oluşan veri setini okutunuz. 
+Kontrol ve test grubu verilerini ayrı değişkenlere atayınız.
+"""
+Control_Group = pd.read_excel(r"C:\Users\ALIENWARE\PycharmProjects\pythonProject\hafta_4_vbo\Odevler\ab_testing.xlsx",
+                              sheet_name='Control Group')  # maximum bidding
+Test_Group = pd.read_excel(r"C:\Users\ALIENWARE\PycharmProjects\pythonProject\hafta_4_vbo\Odevler\ab_testing.xlsx",
+                           sheet_name='Test Group')  # average bidding
+"""
+Adım 2: Kontrol ve test grubu verilerini analiz ediniz.
+"""
+Control_Group.info()
+Control_Group.describe().T
+Test_Group.info()
+Test_Group.describe().T
+"""
+Adım 3: Analiz işleminden sonra concat metodunu kullanarak kontrol ve test grubu verilerini birleştiriniz.
+"""
+All_Groups = pd.concat([Control_Group, Test_Group])
+
+# Görev 2:  A/B Testinin Hipotezinin Tanımlanması
+
+"""
+Adım 1: Hipotezi tanımlayınız.
+H0 : M1 = M2 
+H1 : M1!= M2 
+"""
+# H0: M1 = M2 (Kontrol ve test grubu kazanc ortalamalari arasinda istatistiki olarak anlamli bir fark yoktur)
+# H1: M1!= M2 (...fark vardir)
+"""
+Adım 2: Kontrol ve test grubu için purchase(kazanç) ortalamalarını analiz ediniz.
+"""
+Control_Group["Purchase"].mean()
+Test_Group["Purchase"].mean()
+
+# Görev 3:  Hipotez Testinin Gerçekleştirilmesi
+"""
+Adım 1: Hipotez testi yapılmadan önce varsayım kontrollerini yapınız.
+Bunlar Normallik Varsayımı ve VaryansHomojenliğidir. Kontrol ve test grubunun normallik varsayımına uyup uymadığını Purchase değişkeni üzerinden ayrı ayrı test ediniz.
+    Normallik Varsayımı :
+    H0: Normal dağılım varsayımı sağlanmaktadır.
+    H1: Normal dağılım varsayımı sağlanmamaktadır.
+    p < 0.05 H0 RED , p > 0.05 H0 REDDEDİLEMEZ
+    Test sonucuna göre normallik varsayımı kontrol ve test grupları için sağlanıyor mu ? Elde edilen p-valuedeğerlerini yorumlayınız.
+
+    VaryansHomojenliği :
+    H0: Varyanslarhomojendir.
+    H1: Varyanslarhomojen Değildir.
+    p < 0.05 H0 RED , p > 0.05 H0 REDDEDİLEMEZ
+    Kontrol ve test grubu için varyanshomojenliğinin sağlanıp sağlanmadığını Purchasedeğişkeni üzerinden test ediniz.
+    Test sonucuna göre normallik varsayımı sağlanıyor mu? Elde edilen p-valuedeğerlerini yorumlayınız.
+"""
+test_stat, pvalue = shapiro(Control_Group["Purchase"])
+print('Test Stat = %.4f, p-value = %.4f' % (test_stat, pvalue))
+# p-value = 0.5891 > 0.05'den buyuk oldugu icin H0 reddedilemez ve normal dagilim saglanmaktadir
+
+test_stat, pvalue = shapiro(Test_Group["Purchase"])
+print('Test Stat = %.4f, p-value = %.4f' % (test_stat, pvalue))
+# p-value = 0.1541 > 0.05'den buyuk oldugu icin H0 reddedilemez ve normal dagilim saglanmaktadir
+
+test_stat, pvalue = levene(Control_Group["Purchase"].dropna(),
+                           Test_Group["Purchase"].dropna())
+print('Test Stat = %.4f, p-value = %.4f' % (test_stat, pvalue))
+# p-value = 0.1083 > 0.05'den buyuk oldugu icin H0 reddedilmez ve varyanslar homojendir
+
+"""
+Adım 2: Normallik Varsayımı ve VaryansHomojenliği sonuçlarına göre uygun testi seçiniz.
+"""
+# Varsayimlar saglandigi icin bagimsiz iki orneklem t-testi kullanacagiz
+tvalue, pvalue = ttest_ind(Control_Group["Purchase"], Test_Group["Purchase"])
+print('tvalue = %.4f, pvalue = %.4f' % (tvalue, pvalue))
+
+"""
+Adım 3: Test sonucunda elde edilen p_valuedeğerini göz önünde bulundurarak
+kontrol ve test grubu satın alma ortalamaları arasında istatistiki olarak anlamlı bir fark olup olmadığını yorumlayınız.
+"""
+# pvalue = 0.3493 > 0.05 oldugu icin H0 hipotezi reddedilemez bu yuzden istatistiki olarak anlamli bir fark yoktur
+
+# t-test kullandik cunku varsayim kontrolu yaptigimizda varsayimlar saglaniyordu ve ortalama uzerinden bir kiyaslama yaptik
+
